@@ -21,6 +21,7 @@ import {
   TextInput,
   TouchableHighlight,
   View,
+  PermissionsAndroid,
 } from 'react-native';
 
 const defaultStyles = {
@@ -43,7 +44,7 @@ const defaultStyles = {
   listView: {},
   row: {
     backgroundColor: '#FFFFFF',
-    padding: 13,
+    paddingVertical: 13,
     minHeight: 44,
     flexDirection: 'row',
   },
@@ -67,7 +68,20 @@ const defaultStyles = {
   },
   powered: {},
 };
-
+const requestLocationPermission = async () => {
+  try {
+    const granted = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+    );
+    if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+      console.log('You can use the location');
+    } else {
+      console.log('Location permission denied');
+    }
+  } catch (err) {
+    console.warn(err);
+  }
+};
 export const GooglePlacesAutocomplete = forwardRef((props, ref) => {
   let _results = [];
   let _requests = [];
@@ -172,7 +186,8 @@ export const GooglePlacesAutocomplete = forwardRef((props, ref) => {
     }
   };
 
-  const getCurrentLocation = () => {
+  const getCurrentLocation = async () => {
+    await requestLocationPermission();
     let options = {
       enableHighAccuracy: false,
       timeout: 20000,
@@ -206,6 +221,7 @@ export const GooglePlacesAutocomplete = forwardRef((props, ref) => {
             _disableRowLoaders();
             props.onPress(currentLocation, currentLocation);
           } else {
+            Keyboard.dismiss();
             _requestNearby(position.coords.latitude, position.coords.longitude);
           }
         },
@@ -217,7 +233,7 @@ export const GooglePlacesAutocomplete = forwardRef((props, ref) => {
       );
   };
 
-  const _onPress = (rowData) => {
+  const _onPress = async (rowData) => {
     if (rowData.isPredefinedPlace !== true && props.fetchDetails === true) {
       if (rowData.isLoading === true) {
         // already requesting
@@ -298,12 +314,12 @@ export const GooglePlacesAutocomplete = forwardRef((props, ref) => {
       request.send();
     } else if (rowData.isCurrentLocation === true) {
       // display loader
-      _enableRowLoader(rowData);
+      // _enableRowLoader(rowData);
 
-      setStateText(_renderDescription(rowData));
+      // setStateText(_renderDescription(rowData));
 
       delete rowData.isLoading;
-      getCurrentLocation();
+      await getCurrentLocation();
     } else {
       setStateText(_renderDescription(rowData));
 
@@ -314,6 +330,7 @@ export const GooglePlacesAutocomplete = forwardRef((props, ref) => {
       // sending predefinedPlace as details for predefined places
       props.onPress(predefinedPlace, predefinedPlace);
     }
+    console.log('_onPress');
   };
 
   const _enableRowLoader = (rowData) => {
@@ -412,7 +429,7 @@ export const GooglePlacesAutocomplete = forwardRef((props, ref) => {
             } else {
               results = responseJSON.results;
             }
-
+            setStateText(_renderDescription(results[0]));
             setDataSource(buildRowsFromResults(results));
             // }
           }
